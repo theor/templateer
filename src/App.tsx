@@ -4,16 +4,15 @@ import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
 import "bulma/css/bulma.min.css";
 import * as Bulma from 'react-bulma-components';
-import { emit, listen, UnlistenFn, EventCallback } from '@tauri-apps/api/event'
+import { emit, listen, UnlistenFn, EventCallback } from '@tauri-apps/api/event';
+ import * as Papa from 'papaparse';
 // Check if the `$APPDATA/avatar.png` file exists
 let listenCallback: EventCallback<string>|undefined = undefined;
-const unlisten = await listen<string>('fs', e => {
-  if(listenCallback)
-    listenCallback(e);
-});
+
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
-  const [csv, setCsv] = useState("");
+  const [csvContent, setCsvContent] = useState<unknown>([]);
+  const [unlistenFn, setUnlistenFn] = useState<UnlistenFn|undefined>(undefined);
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -21,12 +20,24 @@ function App() {
 
   }
 
+  useEffect(() => {
+    (async() => {
+    const unlisten = await listen<string>('fs', e => {
+      if(listenCallback)
+        listenCallback(e);
+    });
+    setUnlistenFn(unlisten);
+  })();
+  return typeof unlistenFn === 'function' ? () => unlistenFn() : undefined;
+  });
+
   listenCallback = async (e) => {
     console.warn(e);
     const content = await invoke<string>("getfile", {name: e.payload});
+    const parsed = Papa.parse(content, {header:true,delimiter: ','});
     // const content = await invoke<string>("greet", {name: e.payload});
-    console.log("content", content);
-    setGreetMsg(content);
+    console.log("content", content, parsed);
+    setCsvContent(parsed.data);
   };
 
   // greet();
@@ -37,12 +48,11 @@ function App() {
       <Bulma.Container>
         <Bulma.Columns>
           <Bulma.Columns.Column>
-            <h1 className="title">
-              Hello World
-            </h1>
-            <p className="subtitle">
-              My first website with <strong>Bulma</strong>!
-            </p>
+          <Bulma.Block>
+            <Bulma.Content>
+              {JSON.stringify(csvContent)}
+              </Bulma.Content>
+            </Bulma.Block>
           </Bulma.Columns.Column>
           <Bulma.Columns.Column>
             <Bulma.Block>
