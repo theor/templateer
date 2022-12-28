@@ -8,6 +8,9 @@ import { emit, listen, UnlistenFn, EventCallback } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/api/dialog';
 import * as Papa from 'papaparse';
 import { useReducerAsync, AsyncActionHandlers } from "use-reducer-async";
+import {DockLayout, LayoutData, LayoutBase, PanelData} from 'rc-dock'
+import "rc-dock/dist/rc-dock.css";
+import { Toolbar } from "./Toolbar";
 
 type Project = {
   file: string;
@@ -100,7 +103,7 @@ type SyncAction =
   | { type: 'set-data', data?: string[][] }
   | { type: 'loading', progress?: number }
 
-type Action = AsyncAction | SyncAction
+export type Action = AsyncAction | SyncAction
 
 function reducer(state: State, action: SyncAction): State {
   console.log(state, action);
@@ -118,9 +121,9 @@ type Reducer = (state: State, action: Action) => State;
 const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
   "load": (s) => async (action) => {
     if (action.kind === 'template') {
-      s.dispatch({type:"update-preview", row: s.getState().row,template: await invoke<string>("getfile", { name: action.path })})
+      s.dispatch({ type: "update-preview", row: s.getState().row, template: await invoke<string>("getfile", { name: action.path }) })
       // s.dispatch({type: "set-preview", template: "", row: s.getState().row, preview: ""})
-      
+
       // const content = await invoke<string>("getfile", { name: action.path });
       // s.dispatch({type: "set-preview", template:content, row: s.getState().row, preview: ""})
     } else {
@@ -142,7 +145,7 @@ const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
   },
 
   "update-preview": (s) => async (action) => {
-    console.log("update preview", action, s);
+    // console.log("update preview", action, s);
     s.dispatch({ type: 'set-preview', preview: "??", template: action.template, row: action.row });
     const preview = await doTemplate(action.template, s.getState().data ?? [], action.row);
     s.dispatch({ type: 'set-preview', preview: preview, template: action.template, row: action.row });
@@ -152,7 +155,7 @@ const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
       multiple: false,
       filters: [{
         name: action.kind === 'csv' ? 'CSV' : "HTML template",
-        extensions: [ action.kind === 'csv' ? 'csv' : "html"]
+        extensions: [action.kind === 'csv' ? 'csv' : "html"]
       }]
     });
     if (typeof selected === 'string')
@@ -180,112 +183,137 @@ const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
     }
   }
 };
-const Icon = ({name}:{name:string}) => 
-<Bulma.Icon><i className={`fas fa-${name} mr-2`} aria-hidden="true"></i></Bulma.Icon>
+
+export const Icon = ({ name }: { name: string }) =>
+  <Bulma.Icon><i className={`fas fa-${name} mr-2`} aria-hidden="true"></i></Bulma.Icon>;
+
+interface AppProps {
+  state: State,
+  dispatch: React.Dispatch<Action>,
+}
+
+const DataPanel = ({ state, dispatch }: AppProps) => {
+  return <Panel title="Data">
+    <Bulma.Block>
+      <Bulma.Table striped size="fullwidth" hoverable>
+        <thead>
+          {state.data && state.data?.length > 0 ? <tr>
+            <th>#</th>
+            {state.data[0].map((f, i) => <th key={i}>{f}</th>)}
+          </tr> : <tr><td>No data yet</td></tr>}
+        </thead>
+        <tbody>
+          {state.data && state.data.map((crow, i) => i == 0
+            ? undefined
+            : <tr className={`${i === state.row && 'is-selected'}`} onClick={_ => dispatch({ type: 'update-preview', row: i, template: state.template })} key={i}>
+              <td>{i}</td>
+              {crow.map((f, j) => <td key={j}>{f}</td>)}
+            </tr>
+          )}
+        </tbody>
+      </Bulma.Table>
+    </Bulma.Block>
+  </Panel>
+};
+const TemplatePanel = ({ state, dispatch }: AppProps) => {
+  console.warn(state.template);
+  return <Panel title="Template">
+    <Bulma.Block>
+      <Bulma.Form.Textarea value={state.template} onChange={e => dispatch({ type: 'update-preview', row: state.row, template: e.target.value })}>
+      </Bulma.Form.Textarea>
+    </Bulma.Block>
+
+  </Panel>;
+}
+
+const PreviewPanel = ({ state, dispatch }: AppProps) => {
+  return <Panel title="Preview">
+    <Bulma.Block>
+      <Bulma.Content dangerouslySetInnerHTML={{ __html: state.preview }}>
+      </Bulma.Content>
+    </Bulma.Block>
+  </Panel>;
+}
+
 function App2() {
-  // if(typeof unlisten === 'function')
-  // unlisten();
-  // console.log(unlisten)
-
-  // useEffect(() => {
-  //   const unlisten = listen<string>('fs', e => {
-  //     if (listenCallback)
-  //       listenCallback(e.payload);
-  //   });
-  // }, []);
-
   const initState: State = { row: 1, template: "", preview: "", data: [], progress: undefined };
   const [state, dispatch] = useReducerAsync(reducer, initState, asyncHandlers);
-const [menuOpened, setMenuOpened] = useState(false);
 
-  // listenCallback = async (e) => {
-  //   dispatch({ type: 'load', file: e });
-
+  // const l:LayoutData = {
+  //   dockbox: {
+  //     mode: 'horizontal',
+  //     children: [
+  //       {
+  //         tabs: [
+  //           { id: 'data', title: 'Data', content: x => <DataPanel state={state} dispatch={dispatch} /> },
+  //         ]
+  //       },
+  //       {
+  //         tabs: [
+  //           { id: 'template', title: 'Template', content: x => <TemplatePanel state={state} dispatch={dispatch} /> },]
+  //       },
+  //       {
+  //         tabs: [
+  //           { id: 'preview', title: 'Preview', content: x => <PreviewPanel state={state} dispatch={dispatch} /> },]
+  //       },
+  //     ]
+  //   }
   // };
-  // useEffect(() => {
-  //   if (listenCallback)
-  //     listenCallback("../asd.csv");
-  // dispatch({type:'load', file: "../asd.csv"})
-  // }, []);
-  // useEffect(() => {
-  //   doTemplate(template, data, row).then(x => dispatch({type: "update-preview", html:x}));
-  // }, [template, row])
-
-  // greet();
-  // console.log(state);
-
+   const l:LayoutBase = {
+    dockbox: {
+      mode: 'horizontal',
+      children: [
+        {
+          tabs: [
+            { id: 'data', },
+          ]
+        },
+        {
+          tabs: [
+            { id: 'template' },]
+        },
+        {
+          tabs: [
+            { id: 'preview' },]
+        },
+      ]
+    }
+  };
+  const [layout,setLayout] = useState<LayoutBase>(l);
   return (
     <>
-      <Bulma.Navbar color="link">
-        <Bulma.Navbar.Brand>
-          {/* <Bulma.Navbar.Item>asd</Bulma.Navbar.Item> */}
-          <Bulma.Navbar.Burger onClick={() => setMenuOpened(!menuOpened)} className={`${menuOpened && 'isActive'}`}/>
+      <Toolbar dispatch={dispatch} />
 
-        </Bulma.Navbar.Brand>
-        <Bulma.Navbar.Menu className={`${menuOpened && 'is-active'}`}>
-          <Bulma.Navbar.Container>
-            <Bulma.Navbar.Item onClick={() => dispatch({ type: 'open', kind: 'csv' })}>
-              <Bulma.Navbar.Link>
-                <Icon name="folder-open"/>
-                Open CSV
-              </Bulma.Navbar.Link>
-            </Bulma.Navbar.Item>
+      <DockLayout
+      layout={layout as LayoutData}
+      onLayoutChange={x => {
+        console.log("layout change", x)
+        return setLayout(x);
+      }}
+      loadTab={x => { switch(x.id) {
+        case 'data': return { id: 'data', title: 'Data', cached:false, content: x => <DataPanel state={state} dispatch={dispatch} /> };
+        case 'template': return { id: 'template', title: 'Template', content: x => <TemplatePanel state={state} dispatch={dispatch} /> };
+        case 'preview': return { id: 'preview', title: 'Preview', content: x => <PreviewPanel state={state} dispatch={dispatch} /> };
+        default: return {id:'??', title:'??', content: <span>??</span>}
+      }}}
+      style={{
+        position: "absolute",
+        left: 10,
+        top: 60,
+        right: 10,
+        bottom: 10,
+      }}
+    />
+      {/* <Bulma.Section>
+        <Bulma.Columns> */}
+          {/* <DataPanel state={state} dispatch={dispatch} />
+          <TemplatePanel state={state} dispatch={dispatch} />
+          <PreviewPanel state={state} dispatch={dispatch} /> */}
 
-            <Bulma.Navbar.Item>
-              <Bulma.Navbar.Link onClick={() => dispatch({ type: 'open', kind: 'template' })}>
-                <Icon name="folder-open"/>
-                Open template
-              </Bulma.Navbar.Link>
-            </Bulma.Navbar.Item>
 
-            <Bulma.Navbar.Item>
-              <Bulma.Navbar.Link onClick={() => dispatch({ type: 'export' })}>
-                <Icon name="download"/>
-                Export all
-              </Bulma.Navbar.Link>
-            </Bulma.Navbar.Item>
-          </Bulma.Navbar.Container>
-        </Bulma.Navbar.Menu>
-      </Bulma.Navbar>
-      <Bulma.Section>
-        <Bulma.Columns>
-          <Panel title="Data">
-            <Bulma.Block>
-              <Bulma.Table striped size="fullwidth" hoverable>
-                <thead>
-                  {state.data && state.data?.length > 0 ? <tr>
-                    <th>#</th>
-                    {state.data[0].map((f, i) => <th key={i}>{f}</th>)}
-                  </tr> : <tr>No data yet</tr>}
-                </thead>
-                <tbody>
-                  {state.data && state.data.map((crow, i) => i == 0
-                    ? undefined
-                    : <tr className={`${i === state.row && 'is-selected'}`} onClick={_ => dispatch({ type: 'update-preview', row: i, template: state.template })} key={i}>
-                      <td>{i}</td>
-                      {crow.map((f, j) => <td key={j}>{f}</td>)}
-                    </tr>
-                  )}
-                </tbody>
-              </Bulma.Table>
-            </Bulma.Block>
-          </Panel>
 
-          <Panel title="Template">
-            <Bulma.Block>
-              <Bulma.Form.Textarea value={state.template} onChange={e => dispatch({ type: 'update-preview', row: state.row, template: e.target.value })}>
-              </Bulma.Form.Textarea>
-            </Bulma.Block>
-
-          </Panel>
-          <Panel title="Preview">
-            <Bulma.Block>
-              <Bulma.Content dangerouslySetInnerHTML={{ __html: state.preview }}>
-              </Bulma.Content>
-            </Bulma.Block>
-          </Panel>
-        </Bulma.Columns>
-      </Bulma.Section>
+        {/* </Bulma.Columns>
+      </Bulma.Section> */}
       {state.progress &&
         <Bulma.Modal show={true} showClose={false}>
           <div className="modal-background"></div>
@@ -302,5 +330,6 @@ const [menuOpened, setMenuOpened] = useState(false);
 }
 
 export default App;
+
 
 
