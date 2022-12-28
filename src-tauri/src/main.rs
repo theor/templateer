@@ -43,6 +43,10 @@ fn getfile(name: &str) -> String {
         }
     }
 }
+#[tauri::command]
+fn save(folder: &str, file: &str, template: &str) {
+    fs::write(Path::new(folder).join(file), template).unwrap();
+}
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -91,7 +95,7 @@ fn main() {
         .unwrap();
 
     tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![getfile,greet,cwd,render])
+    .invoke_handler(tauri::generate_handler![getfile,greet,cwd,render,save])
         .setup(|app| {
             *HANDLE.lock().unwrap() = Some(app.handle().clone());
             println!("setup");
