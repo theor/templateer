@@ -11,7 +11,7 @@ use std::{
     env::{current_dir, var},
     path::Path,
 };
-
+use comrak::{markdown_to_html, ComrakOptions};
 // use notify::{RecommendedWatcher, RecursiveMode, Result, Watcher};
 use notify_debouncer_mini::{new_debouncer, notify::*, DebounceEventResult};
 use tauri::{AppHandle, Manager};
@@ -49,6 +49,12 @@ fn getfile(name: &str) -> String {
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
+// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+#[tauri::command]
+fn render(markdown: &str) -> String {
+    
+    markdown_to_html(markdown, &ComrakOptions::default())   
+}
 static HANDLE: Mutex<Option<AppHandle>> = Mutex::new(None);
 fn main() {
     //    let mut handle: Option<AppHandle> = None;
@@ -56,7 +62,7 @@ fn main() {
 
     let mut debouncer =
         new_debouncer(
-            Duration::from_secs(2),
+            Duration::from_secs(1),
             None,
             |res: DebounceEventResult| match res {
                 Ok(events) => {
@@ -85,7 +91,7 @@ fn main() {
         .unwrap();
 
     tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![getfile,greet,cwd])
+    .invoke_handler(tauri::generate_handler![getfile,greet,cwd,render])
         .setup(|app| {
             *HANDLE.lock().unwrap() = Some(app.handle().clone());
             println!("setup");

@@ -809,6 +809,11 @@ update-browserslist-db@^1.0.9:
     escalade "^3.1.1"
     picocolors "^1.0.0"
 
+use-reducer-async@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/use-reducer-async/-/use-reducer-async-2.1.1.tgz#c90eb7af3a7ef23c772b2712a9d56b03a0e272aa"
+  integrity sha512-oPSFzOIEPgMenQkMHzqeRgsQLSpcyGkspAnyTWP4l1tKlt31wMVMz6wWj6g/jea/Ms7lRvBz4AL+Okt83Tntig==
+
 vite@^4.0.0:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/vite/-/vite-4.0.3.tgz#de27ad3f263a03ae9419cdc8bc07721eadcba8b9"
