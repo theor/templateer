@@ -31,7 +31,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.theor.apps",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -60,7 +60,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "tauri-app",
+        "title": "Templateer",
         "width": 800
       }
     ]

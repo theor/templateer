@@ -180,7 +180,8 @@ const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
     }
   }
 };
-
+const Icon = ({name}:{name:string}) => 
+<Bulma.Icon><i className={`fas fa-${name} mr-2`} aria-hidden="true"></i></Bulma.Icon>
 function App2() {
   // if(typeof unlisten === 'function')
   // unlisten();
@@ -195,7 +196,7 @@ function App2() {
 
   const initState: State = { row: 1, template: "", preview: "", data: [], progress: undefined };
   const [state, dispatch] = useReducerAsync(reducer, initState, asyncHandlers);
-
+const [menuOpened, setMenuOpened] = useState(false);
 
   // listenCallback = async (e) => {
   //   dispatch({ type: 'load', file: e });
@@ -215,28 +216,31 @@ function App2() {
 
   return (
     <>
-      <Bulma.Navbar color="primary">
+      <Bulma.Navbar color="link">
         <Bulma.Navbar.Brand>
-          <Bulma.Navbar.Item>asd</Bulma.Navbar.Item>
-          <Bulma.Navbar.Burger />
+          {/* <Bulma.Navbar.Item>asd</Bulma.Navbar.Item> */}
+          <Bulma.Navbar.Burger onClick={() => setMenuOpened(!menuOpened)} className={`${menuOpened && 'isActive'}`}/>
 
         </Bulma.Navbar.Brand>
-        <Bulma.Navbar.Menu>
+        <Bulma.Navbar.Menu className={`${menuOpened && 'is-active'}`}>
           <Bulma.Navbar.Container>
-            <Bulma.Navbar.Item>
-              <Bulma.Navbar.Link onClick={() => dispatch({ type: 'open', kind: 'csv' })}>
+            <Bulma.Navbar.Item onClick={() => dispatch({ type: 'open', kind: 'csv' })}>
+              <Bulma.Navbar.Link>
+                <Icon name="folder-open"/>
                 Open CSV
               </Bulma.Navbar.Link>
             </Bulma.Navbar.Item>
 
             <Bulma.Navbar.Item>
               <Bulma.Navbar.Link onClick={() => dispatch({ type: 'open', kind: 'template' })}>
+                <Icon name="folder-open"/>
                 Open template
               </Bulma.Navbar.Link>
             </Bulma.Navbar.Item>
 
             <Bulma.Navbar.Item>
               <Bulma.Navbar.Link onClick={() => dispatch({ type: 'export' })}>
+                <Icon name="download"/>
                 Export all
               </Bulma.Navbar.Link>
             </Bulma.Navbar.Item>
@@ -249,10 +253,10 @@ function App2() {
             <Bulma.Block>
               <Bulma.Table striped size="fullwidth" hoverable>
                 <thead>
-                  {state.data && state.data?.length > 0 && <tr>
+                  {state.data && state.data?.length > 0 ? <tr>
                     <th>#</th>
                     {state.data[0].map((f, i) => <th key={i}>{f}</th>)}
-                  </tr>}
+                  </tr> : <tr>No data yet</tr>}
                 </thead>
                 <tbody>
                   {state.data && state.data.map((crow, i) => i == 0
