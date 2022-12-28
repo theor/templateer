@@ -71,7 +71,7 @@ interface State {
   progress?: number;
 }
 
-const htmlTemplate = (title: string, content:string) => `<!DOCTYPE html>
+const htmlTemplate = (title: string, content: string) => `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -91,9 +91,9 @@ const htmlTemplate = (title: string, content:string) => `<!DOCTYPE html>
 </html>`;
 
 type AsyncAction =
-  | { type: 'load', file: string }
+  | { type: 'load', path: string, kind: 'csv' | 'template' }
   | { type: "update-preview", template: string, row: number }
-  | { type: "open", file: 'csv' | 'template' }
+  | { type: "open", kind: 'csv' | 'template' }
   | { type: "export" }
 type SyncAction =
   | { type: "set-preview", preview: string, template: string, row: number }
@@ -117,20 +117,28 @@ function reducer(state: State, action: SyncAction): State {
 type Reducer = (state: State, action: Action) => State;
 const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
   "load": (s) => async (action) => {
-    s.dispatch({ type: 'set-data', data: undefined });
-    console.log("load", action, s);
-    const content = await invoke<string>("getfile", { name: action.file });
-    const parsed = Papa.parse<string[]>(content, { delimiter: ',' });
-    if (parsed && parsed.data.length > 0)
-      parsed.data[0] = parsed.data[0].map((h, i) => {
-        const hh = h.trim();
-        if (hh === "")
-          return `${i}`;
-        return hh;
-      });
-    // const content = await invoke<string>("greet", {name: e.payload});
-    console.log("content", content, parsed);
-    s.dispatch({ type: 'set-data', data: parsed.data });
+    if (action.kind === 'template') {
+      s.dispatch({type:"update-preview", row: s.getState().row,template: await invoke<string>("getfile", { name: action.path })})
+      // s.dispatch({type: "set-preview", template: "", row: s.getState().row, preview: ""})
+      
+      // const content = await invoke<string>("getfile", { name: action.path });
+      // s.dispatch({type: "set-preview", template:content, row: s.getState().row, preview: ""})
+    } else {
+      s.dispatch({ type: 'set-data', data: undefined });
+      console.log("load", action, s);
+      const content = await invoke<string>("getfile", { name: action.path });
+      const parsed = Papa.parse<string[]>(content, { delimiter: ',' });
+      if (parsed && parsed.data.length > 0)
+        parsed.data[0] = parsed.data[0].map((h, i) => {
+          const hh = h.trim();
+          if (hh === "")
+            return `${i}`;
+          return hh;
+        });
+      // const content = await invoke<string>("greet", {name: e.payload});
+      console.log("content", content, parsed);
+      s.dispatch({ type: 'set-data', data: parsed.data });
+    }
   },
 
   "update-preview": (s) => async (action) => {
@@ -143,12 +151,12 @@ const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
     const selected = await open({
       multiple: false,
       filters: [{
-        name: 'CSV',
-        extensions: ['csv']
+        name: action.kind === 'csv' ? 'CSV' : "HTML template",
+        extensions: [ action.kind === 'csv' ? 'csv' : "html"]
       }]
     });
     if (typeof selected === 'string')
-      s.dispatch({ type: 'load', file: selected });
+      s.dispatch({ type: 'load', path: selected, kind: action.kind });
   },
   "export": s => async (action) => {
     const state = s.getState();
@@ -216,13 +224,18 @@ function App2() {
         <Bulma.Navbar.Menu>
           <Bulma.Navbar.Container>
             <Bulma.Navbar.Item>
-              <Bulma.Navbar.Link onClick={() => dispatch({ type: 'open', file: 'csv' })}>
-                CSV
+              <Bulma.Navbar.Link onClick={() => dispatch({ type: 'open', kind: 'csv' })}>
+                Open CSV
               </Bulma.Navbar.Link>
-
             </Bulma.Navbar.Item>
-            <Bulma.Navbar.Item>
 
+            <Bulma.Navbar.Item>
+              <Bulma.Navbar.Link onClick={() => dispatch({ type: 'open', kind: 'template' })}>
+                Open template
+              </Bulma.Navbar.Link>
+            </Bulma.Navbar.Item>
+
+            <Bulma.Navbar.Item>
               <Bulma.Navbar.Link onClick={() => dispatch({ type: 'export' })}>
                 Export all
               </Bulma.Navbar.Link>

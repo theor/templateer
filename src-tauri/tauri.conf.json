@@ -6,8 +6,8 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "tauri-app",
-    "version": "0.0.0"
+    "productName": "Templateer",
+    "version": "0.0.1"
   },
   "tauri": {
     "allowlist": {
