@@ -105,7 +105,6 @@ export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
             // const content = await invoke<string>("getfile", { name: action.path });
             // s.dispatch({type: "set-preview", template:content, row: s.getState().row, preview: ""})
         } else {
-            s.dispatch({ type: 'set-data', data: undefined });
             console.log("load", action, s);
             const content = await invoke<string>("getfile", { name: action.path });
             const parsed = Papa.parse<string[]>(content, { delimiter: ',' });

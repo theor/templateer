@@ -3,7 +3,6 @@
     windows_subsystem = "windows"
 )]
 
-use std::ffi::OsStr;
 use std::fs;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -72,8 +71,8 @@ fn main() {
                 Ok(events) => {
                     for event in events.iter() {
                        
-                                if event.kind == notify_debouncer_mini::DebouncedEventKind::Any && event
-                                    .path.extension() == Some(OsStr::new("csv"))
+                                if event.kind == notify_debouncer_mini::DebouncedEventKind::Any /*&& event
+                                    .path.extension() == Some(OsStr::new("csv"))*/
                                 {
                                     println!("event: {:?}", event);
                                     let hh = HANDLE.lock().unwrap();
