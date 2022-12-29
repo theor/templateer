@@ -91,7 +91,7 @@ fn main() {
 
     debouncer
         .watcher()
-        .watch(Path::new(".."), RecursiveMode::NonRecursive)
+        .watch(Path::new("../out"), RecursiveMode::NonRecursive)
         .unwrap();
 
     tauri::Builder::default()
