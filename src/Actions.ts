@@ -2,20 +2,31 @@
 import {invoke} from "@tauri-apps/api/tauri";
 import * as Papa from "papaparse";
 import {open} from "@tauri-apps/api/dialog";
+import {createContext, useContext} from "react";
+import {act} from "react-dom/test-utils";
 
+type Project = {
+    projectFile?: string;
+    csv?: string;
+    template?: string;
+}
 export interface State {
     row: number;
     template: string;
     preview: string;
     data?: string[][];
     progress?: number;
+    project: Project;
 }
+type Kind = 'csv' | 'template';
 type AsyncAction =
-    | { type: 'load', path: string, kind: 'csv' | 'template' }
+    | {type: 'reload-project'}
+    | { type: 'load', path: string, kind: Kind }
     | { type: "update-preview", template: string, row: number }
-    | { type: "open", kind: 'csv' | 'template' }
+    | { type: "open", kind: Kind }
     | { type: "export" }
 type SyncAction =
+    | { type: "update-project", kind: Kind, value: string }
     | { type: "set-preview", preview: string, template: string, row: number }
     | { type: 'set-data', data?: string[][] }
     | { type: 'loading', progress?: number }
@@ -63,12 +74,30 @@ export function reducer(state: State, action: SyncAction): State {
             return { ...state, data: action.data };
         case 'loading':
             return { ...state, progress: action.progress };
+        case "update-project":
+            switch(action.kind){
+                case "csv":
+                    return {...state, project: {...state.project, csv: action.value}}
+                case "template":
+                    return {...state, project: {...state.project, template: action.value}}
+            }
     }
     return state;
 }
 type Reducer = (state: State, action: Action) => State;
 export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
+    "reload-project": s => async action => {
+        const state = s.getState();
+        if(state.project.csv){
+            s.dispatch({type:"load", kind: "csv",path: state.project.csv})
+        }
+        if(state.project.template){
+            s.dispatch({type:"load", kind: "template", path: state.project.template})
+            
+        }
+    },
     "load": (s) => async (action) => {
+        s.dispatch({type: 'update-project', kind:action.kind, value: action.path});
         if (action.kind === 'template') {
             s.dispatch({ type: "update-preview", row: s.getState().row, template: await invoke<string>("getfile", { name: action.path }) })
             // s.dispatch({type: "set-preview", template: "", row: s.getState().row, preview: ""})
@@ -132,3 +161,27 @@ export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
         }
     }
 };
+export type AppContext = {
+  state: State,
+  dispatch: React.Dispatch<Action>,
+};
+export const AppContext = createContext<AppContext | undefined>(undefined);
+export function useAppReducer(): [State, React.Dispatch<Action>] {//, React.KeyboardEventHandler] {
+    const { state, dispatch } = useContext(AppContext)!;
+    const onKeyDown: React.KeyboardEventHandler = x => {
+        console.log("dispatch down")
+        if (!state.data || state.data.length < 3)
+            return;
+        if (x.ctrlKey) {
+            switch (x.code) {
+                case "ArrowDown":
+                    x.preventDefault();
+                    dispatch({ type: 'update-preview', row: 1 + (state.row) % (state.data.length - 1), template: state.template }); break;
+                case "ArrowUp":
+                    x.preventDefault();
+                    dispatch({ type: 'update-preview', row: 1 + (state.row - 1 + state.data.length - 2) % (state.data.length - 1), template: state.template }); break;
+            }
+        }
+    };
+    return [state, dispatch];//, onKeyDown];
+}

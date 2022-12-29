@@ -1,8 +1,10 @@
 import { useState } from "react";
 import * as Bulma from 'react-bulma-components';
-import { Action, Icon } from "./App";
+import {  Icon } from "./App";
+import {Action, useAppReducer} from "./Actions";
 
-export function Toolbar({ dispatch }: { dispatch: React.Dispatch<Action>; }) {
+export function Toolbar() {
+  const [state, dispatch] = useAppReducer();
   const [menuOpened, setMenuOpened] = useState(false);
   return <Bulma.Navbar color="link">
     <Bulma.Navbar.Brand>
@@ -12,6 +14,10 @@ export function Toolbar({ dispatch }: { dispatch: React.Dispatch<Action>; }) {
     </Bulma.Navbar.Brand>
     <Bulma.Navbar.Menu className={`${menuOpened && 'is-active'}`}>
       <Bulma.Navbar.Container>
+        <Bulma.Navbar.Item onClick={() => dispatch({ type: 'reload-project' })}>
+            <Icon name="arrow-rotate-right" />
+            
+        </Bulma.Navbar.Item>
         <Bulma.Navbar.Item onClick={() => dispatch({ type: 'open', kind: 'csv' })}>
           <Bulma.Navbar.Link>
             <Icon name="folder-open" />
@@ -31,6 +37,18 @@ export function Toolbar({ dispatch }: { dispatch: React.Dispatch<Action>; }) {
             <Icon name="download" />
             Export all
           </Bulma.Navbar.Link>
+        </Bulma.Navbar.Item>
+
+        <Bulma.Navbar.Item hoverable> {/* active={!!(state.project.csv || state.project.template)} >*/}
+          <Bulma.Navbar.Link>
+            <Icon name="folder-open" />
+            Project
+          </Bulma.Navbar.Link>
+          <Bulma.Navbar.Dropdown>
+            <Bulma.Navbar.Item>CSV: {state.project.csv}</Bulma.Navbar.Item>
+            <Bulma.Navbar.Item>Template: {state.project.template}</Bulma.Navbar.Item>
+          </Bulma.Navbar.Dropdown>
+          
         </Bulma.Navbar.Item>
       </Bulma.Navbar.Container>
     </Bulma.Navbar.Menu>

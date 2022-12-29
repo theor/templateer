@@ -9,13 +9,8 @@ import { useReducerAsync, AsyncActionHandlers } from "use-reducer-async";
 import { DockLayout, LayoutData, LayoutBase, PanelData } from 'rc-dock'
 import "rc-dock/dist/rc-dock.css";
 import { Toolbar } from "./Toolbar";
-import {Action, asyncHandlers, reducer, State} from "./Actions";
+import {Action, AppContext, asyncHandlers, reducer, State, useAppReducer} from "./Actions";
 
-type Project = {
-  file: string;
-  csv: string;
-  template: string;
-}
 
 let listenCallback: ((path: string) => void) | undefined = undefined;
 
@@ -51,13 +46,13 @@ function useEventListener(eventName: string, handler: EventListener, element = w
 }
 
 function App() {
-  const initState: State = { row: 1, template: "", preview: "", data: [], progress: undefined };
+  const initState: State = { row: 1, template: "", preview: "", data: [], progress: undefined,
+  project: {  }};
   const [state, dispatch] = useReducerAsync(reducer, initState, asyncHandlers);
 
   const handler = useCallback(
     (x:KeyboardEvent) => {
       console.log(x, state)
-      // Update coordinates
       if (!state.data || state.data.length < 3)
         return;
       if (x.ctrlKey) {
@@ -74,7 +69,6 @@ function App() {
     },
     [dispatch, state]
   );
-  // Add event listener using our hook
   useEventListener("keyup", handler as EventListener);
 
   return <AppContext.Provider value={{ state, dispatch }}>
@@ -85,11 +79,6 @@ function App() {
 
 export const Icon = ({ name }: { name: string }) =>
   <Bulma.Icon><i className={`fas fa-${name} mr-2`} aria-hidden="true"></i></Bulma.Icon>;
-
-// interface AppProps {
-//   state: State,
-//   dispatch: React.Dispatch<Action>,
-// }
 
 const DataPanel = () => {
   const [state, dispatch] = useAppReducer();
@@ -117,32 +106,11 @@ const TemplatePanel = () => {
   const [state, dispatch] = useAppReducer();
   // console.warn(state.template);
   return (
-    // <Bulma.Block>
     <Bulma.Form.Textarea style={{ maxHeight: "unset", height: "100%" }} value={state.template} onChange={e => dispatch({ type: 'update-preview', row: state.row, template: e.target.value })}>
     </Bulma.Form.Textarea>
-    // </Bulma.Block>
   );
 }
 
-function useAppReducer(): [State, React.Dispatch<Action>] {//, React.KeyboardEventHandler] {
-  const { state, dispatch } = useContext(AppContext)!;
-  const onKeyDown: React.KeyboardEventHandler = x => {
-    console.log("dispatch down")
-    if (!state.data || state.data.length < 3)
-      return;
-    if (x.ctrlKey) {
-      switch (x.code) {
-        case "ArrowDown":
-          x.preventDefault();
-          dispatch({ type: 'update-preview', row: 1 + (state.row) % (state.data.length - 1), template: state.template }); break;
-        case "ArrowUp":
-          x.preventDefault();
-          dispatch({ type: 'update-preview', row: 1 + (state.row - 1 + state.data.length - 2) % (state.data.length - 1), template: state.template }); break;
-      }
-    }
-  };
-  return [state, dispatch];//, onKeyDown];
-}
 
 const PreviewPanel = () => {
   const [state, _dispatch] = useAppReducer();
@@ -152,11 +120,6 @@ const PreviewPanel = () => {
   </Bulma.Block>;
 }
 
-type AppContext = {
-  state: State,
-  dispatch: React.Dispatch<Action>,
-};
-const AppContext = createContext<AppContext | undefined>(undefined);
 function App2() {
   const [state, dispatch] = useAppReducer();
 
@@ -184,7 +147,7 @@ function App2() {
 
   return (
     <div>
-      <Toolbar dispatch={dispatch} />
+      <Toolbar />
 
       <DockLayout
         layout={layout as LayoutData}
