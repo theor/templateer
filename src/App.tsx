@@ -101,8 +101,8 @@ function AppRoot() {
 }
 
 
-export const Icon = ({name}: { name: string }) =>
-    <Bulma.Icon><i className={`fas fa-${name} mr-2`} aria-hidden="true"></i></Bulma.Icon>;
+export const Icon = ({name, classes}: { name: string, classes?:string }) =>
+    <Bulma.Icon><i className={`fas fa-${name} mr-2 ${classes}`} aria-hidden="true"></i></Bulma.Icon>;
 
 const DataPanel = () => {
     const [state, dispatch] = useAppReducer();

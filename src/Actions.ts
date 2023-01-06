@@ -1,9 +1,8 @@
 ﻿import {AsyncActionHandlers} from "use-reducer-async";
-import {invoke} from "@tauri-apps/api/tauri";
 import * as Papa from "papaparse";
-import {open} from "@tauri-apps/api/dialog";
+import {open, save} from "@tauri-apps/api/dialog";
 import {createContext, useContext} from "react";
-import {act} from "react-dom/test-utils";
+import TauriFunctions from "./TauriFunctions";
 
 type Project = {
     projectFile?: string;
@@ -18,14 +17,17 @@ export interface State {
     progress?: number;
     project: Project;
 }
-type Kind = 'csv' | 'template';
+type Kind = 'csv' | 'template' | 'project';
 type AsyncAction =
+    | {type: 'open-project'}
+    | {type: 'save-project'}
     | {type: 'reload-project'}
     | { type: 'load', path: string, kind: Kind }
     | { type: "update-preview", template: string, row: number }
     | { type: "open", kind: Kind }
     | { type: "export" }
 type SyncAction =
+    | { type: "new-project" }
     | { type: "update-project", kind: Kind, value: string }
     | { type: "set-preview", preview: string, template: string, row: number }
     | { type: 'set-data', data?: string[][] }
@@ -41,7 +43,7 @@ function doTemplate(tpl: string, data: string[][], dataRow: number): Promise<str
     var row = data[dataRow];
     let res = tpl;
     headers.forEach((h, i) => res = res.replaceAll(`$${h}`, row[i]));
-    return invoke<string>("render", { markdown: res });
+    return TauriFunctions.render(res);
 
 }
 
@@ -68,6 +70,8 @@ const htmlTemplate = (title: string, content: string) => `<!DOCTYPE html>
 export function reducer(state: State, action: SyncAction): State {
     console.log(state, action);
     switch (action.type) {
+        case "new-project":
+            return {...state, project: {}};
         case 'set-preview':
             return { ...state, preview: action.preview, row: action.row, template: action.template };
         case 'set-data':
@@ -80,12 +84,32 @@ export function reducer(state: State, action: SyncAction): State {
                     return {...state, project: {...state.project, csv: action.value}}
                 case "template":
                     return {...state, project: {...state.project, template: action.value}}
+                case "project":
+                    return {...state, project: {...state.project, projectFile: action.value}}
             }
     }
     return state;
 }
 type Reducer = (state: State, action: Action) => State;
 export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
+    "open-project": s => async action => {
+        const selected = await open();
+        console.log(selected);
+        if(!selected)
+            return;
+        s.dispatch()
+        },
+    "save-project": s => async action => {
+        const selected = await save({filters: [{
+            name: "Templateer project", extensions: ["prj"]
+            }]});
+        if(!selected)
+            return;
+        const proj:Project = { ...s.getState().project, projectFile: selected}; 
+        await TauriFunctions.save(selected, null, JSON.stringify(proj));
+        s.dispatch({type:"update-project", kind: 'project', value: selected});
+        // console.log(selected);
+    },
     "reload-project": s => async action => {
         const state = s.getState();
         if(state.project.csv){
@@ -99,14 +123,10 @@ export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
     "load": (s) => async (action) => {
         s.dispatch({type: 'update-project', kind:action.kind, value: action.path});
         if (action.kind === 'template') {
-            s.dispatch({ type: "update-preview", row: s.getState().row, template: await invoke<string>("getfile", { name: action.path }) })
-            // s.dispatch({type: "set-preview", template: "", row: s.getState().row, preview: ""})
-
-            // const content = await invoke<string>("getfile", { name: action.path });
-            // s.dispatch({type: "set-preview", template:content, row: s.getState().row, preview: ""})
+            s.dispatch({ type: "update-preview", row: s.getState().row, template: await TauriFunctions.getFile(action.path) })
         } else {
             console.log("load", action, s);
-            const content = await invoke<string>("getfile", { name: action.path });
+            const content = await TauriFunctions.getFile(action.path);
             const parsed = Papa.parse<string[]>(content, { delimiter: ',' });
             if (parsed && parsed.data.length > 0)
                 parsed.data[0] = parsed.data[0].map((h, i) => {
@@ -115,7 +135,6 @@ export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
                         return `${i}`;
                     return hh;
                 });
-            // const content = await invoke<string>("greet", {name: e.payload});
             console.log("content", content, parsed);
             s.dispatch({ type: 'set-data', data: parsed.data });
         }
@@ -152,7 +171,7 @@ export const asyncHandlers: AsyncActionHandlers<Reducer, AsyncAction> = {
                     const row = state.data[index];
                     // await new Promise(resolve => setTimeout(resolve, 1000));
                     const tpl = await doTemplate(state.template, state.data, index);
-                    invoke("save", { folder, file: `out-${index}.html`, template: htmlTemplate(`${index}`, tpl) });
+                    await TauriFunctions.save(folder, `out-${index}.html`, htmlTemplate(`${index}`, tpl));
                 }
             } finally {
                 s.dispatch({ type: 'loading', progress: undefined });

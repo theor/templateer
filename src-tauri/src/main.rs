@@ -42,12 +42,15 @@ fn getfile(name: &str) -> String {
         }
     }
 }
+
 #[tauri::command]
 fn save(folder: &str, file: &str, template: &str) {
-    fs::write(Path::new(folder).join(file), template).unwrap();
+    let path = Path::new(folder);
+    let path = if file.len() > 0 { path.join(file) } else { path.to_path_buf() };
+    fs::write(path, template).unwrap();
 }
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+// Learn more about Tauri commands at https://tauri.app/v1/guides/features/commandç
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
